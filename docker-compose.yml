@@ -1,4 +1,4 @@
-name: 'aws-ecs-test'
+name: 'aws-ecs-sample'
 
 x-terraform: &terraform
   image: hashicorp/terraform:latest

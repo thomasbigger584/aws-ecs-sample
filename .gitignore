@@ -89,6 +89,8 @@ fabric.properties
 !.idea/codeStyles
 !.idea/runConfigurations
 
+*.iml
+
 ### Terraform ###
 # Local .terraform directories
 **/.terraform/*
@@ -126,3 +128,5 @@ override.tf.json
 terraform.rc
 
 # End of https://www.toptal.com/developers/gitignore/api/intellij+all,terraform
+
+.env
