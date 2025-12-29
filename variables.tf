@@ -9,3 +9,9 @@ variable "duckdns_token" {
   type        = string
   sensitive   = true
 }
+
+variable "project_name" {
+  description = "The project identifier used for naming resources"
+  type        = string
+  default     = "poker-app"
+}

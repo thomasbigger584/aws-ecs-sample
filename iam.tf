@@ -1,5 +1,5 @@
 resource "aws_iam_role" "ecs_node_role" {
-  name = "ecs-spot-node-role"
+  name = "${var.project_name}-node-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -8,6 +8,9 @@ resource "aws_iam_role" "ecs_node_role" {
       Principal = { Service = "ec2.amazonaws.com" }
     }]
   })
+  tags = {
+    Name = "${var.project_name}-node-role"
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_node_role_policy" {
@@ -16,6 +19,9 @@ resource "aws_iam_role_policy_attachment" "ecs_node_role_policy" {
 }
 
 resource "aws_iam_instance_profile" "ecs_node_profile" {
-  name = "ecs-spot-node-profile"
+  name = "${var.project_name}-node-profile"
   role = aws_iam_role.ecs_node_role.name
+  tags = {
+    Name = "${var.project_name}-node-profile"
+  }
 }

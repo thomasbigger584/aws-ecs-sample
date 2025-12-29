@@ -1,26 +1,26 @@
-# AWS ECS Spot Instance Test
+# AWS ECS Nginx Deployment on Spot Instances
 
-This project demonstrates how to deploy an Nginx service on AWS ECS using EC2 Spot Instances. It utilizes Terraform for Infrastructure as Code (IaC) and includes automatic DuckDNS updates for the EC2 instance IP.
+This project provides a Terraform-based solution for deploying an Nginx service on Amazon Elastic Container Service (ECS) using EC2 Spot Instances. It is designed to be cost-effective and includes automated dynamic DNS updates via DuckDNS.
 
 ## Features
 
-*   **AWS ECS Cluster**: Deploys a lightweight ECS cluster backed by EC2.
-*   **Spot Instances**: Uses `t3.micro` Spot Instances to minimize costs.
-*   **Nginx Service**: Runs a simple Nginx container serving a custom HTML page.
-*   **DuckDNS Integration**: Automatically updates a DuckDNS domain with the Spot Instance's public IP via user data scripts and cron jobs.
-*   **Dockerized Terraform**: Runs Terraform commands inside a Docker container for a consistent environment.
+*   **Cost-Optimized Compute**: Utilizes `t3.micro` EC2 Spot Instances to minimize infrastructure costs.
+*   **ECS Cluster**: Deploys a lightweight ECS cluster backed by EC2.
+*   **Nginx Service**: Hosts a sample Nginx container serving a custom HTML page.
+*   **Dynamic DNS**: Automatically updates a DuckDNS domain with the instance's public IP using user data scripts and cron jobs.
+*   **Containerized Tooling**: Executes Terraform commands within a Docker container to ensure a consistent deployment environment.
 
 ## Prerequisites
 
-*   [Docker](https://www.docker.com/) and Docker Compose installed.
-*   An [AWS Account](https://aws.amazon.com/) with appropriate permissions.
+*   [Docker](https://www.docker.com/) and Docker Compose.
+*   An active [AWS Account](https://aws.amazon.com/) with programmatic access.
 *   A [DuckDNS](https://www.duckdns.org/) account (domain and token).
 
 ## Configuration
 
-Create a `.env` file in the root directory with the following variables:
+Create a `.env` file in the project root with the following credentials and configuration:
 
-```toml
+```dotenv
 # AWS Credentials
 AWS_ACCESS_KEY_ID=<your-aws-access-key-id>
 AWS_SECRET_ACCESS_KEY=<your-aws-secret-access-key>
@@ -33,11 +33,11 @@ TF_VAR_duckdns_token=<your-duckdns-token>
 
 ## Usage
 
-This project uses Docker Compose to wrap Terraform commands, ensuring you don't need to install Terraform locally.
+This project leverages Docker Compose to encapsulate Terraform, eliminating the need for a local Terraform installation.
 
-### Provision Infrastructure
+### Deploy Infrastructure
 
-To initialize and apply the Terraform configuration:
+Initialize and apply the Terraform configuration to provision resources:
 
 ```bash
 docker compose run --rm terraform-apply
@@ -45,16 +45,28 @@ docker compose run --rm terraform-apply
 
 ### Destroy Infrastructure
 
-To tear down all resources:
+Remove all provisioned resources to avoid incurring costs:
 
 ```bash
 docker compose run --rm terraform-destroy
 ```
 
-### Clean Local State
+## State Management
 
-If you need to force a clean initialization (e.g., if you encounter state locking issues or want to re-download providers), you can remove the local Terraform data:
+### Reset Local State
+
+To perform a clean initialization (useful for resolving state locking issues or refreshing providers), remove the local Terraform data:
 
 ```bash
-sudo rm -rf .terraform .terraform.lock.hcl terraform.tfstate
+sudo rm -rf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup
+```
+
+### Advanced Cleanup (AWS Nuke)
+
+For a comprehensive cleanup of AWS resources, you may use [AWS Nuke](https://aws-nuke.ekristen.dev/). This is useful for ensuring no orphaned resources remain.
+
+```bash
+aws-nuke run -c nuke-config.yaml \
+  --access-key-id $(grep AWS_ACCESS_KEY_ID .env | cut -d '=' -f2) \
+  --secret-access-key $(grep AWS_SECRET_ACCESS_KEY .env | cut -d '=' -f2)
 ```
