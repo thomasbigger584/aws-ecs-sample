@@ -1,0 +1,17 @@
+name: 'aws-ecs-test'
+
+x-terraform: &terraform
+  image: hashicorp/terraform:latest
+  volumes:
+    - .:/app
+  working_dir: /app
+  env_file:
+    - .env
+
+services:
+  terraform-apply:
+    <<: [ *terraform ]
+    entrypoint: /bin/sh -c "terraform init && terraform apply -auto-approve"
+  terraform-destroy:
+    <<: [ *terraform ]
+    entrypoint: /bin/sh -c "terraform destroy -auto-approve"
