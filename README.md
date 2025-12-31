@@ -60,13 +60,3 @@ To perform a clean initialization (useful for resolving state locking issues or 
 ```bash
 sudo rm -rf .terraform .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup
 ```
-
-### Advanced Cleanup (AWS Nuke)
-
-For a comprehensive cleanup of AWS resources, you may use [AWS Nuke](https://aws-nuke.ekristen.dev/). This is useful for ensuring no orphaned resources remain.
-
-```bash
-aws-nuke run -c nuke-config.yaml \
-  --access-key-id $(grep AWS_ACCESS_KEY_ID .env | cut -d '=' -f2) \
-  --secret-access-key $(grep AWS_SECRET_ACCESS_KEY .env | cut -d '=' -f2)
-```
