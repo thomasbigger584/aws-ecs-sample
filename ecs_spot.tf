@@ -68,9 +68,9 @@ resource "aws_launch_template" "ecs_spot" {
 
 resource "aws_autoscaling_group" "ecs_asg" {
   vpc_zone_identifier = [aws_subnet.public.id]
-  min_size            = 1
-  max_size            = 1
-  desired_capacity    = 1
+  min_size            = var.asg_min_size
+  max_size            = var.asg_max_size
+  desired_capacity    = var.asg_desired_capacity
   launch_template {
     id      = aws_launch_template.ecs_spot.id
     version = "$Latest"
@@ -83,7 +83,9 @@ resource "aws_autoscaling_group" "ecs_asg" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = [load_balancers, target_group_arns]
   }
+  depends_on = [aws_launch_template.ecs_spot]
 }
 
 resource "aws_ecs_task_definition" "nginx" {
@@ -117,7 +119,7 @@ resource "aws_ecs_service" "main" {
   name            = "nginx-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.nginx.arn
-  desired_count   = 1
+  desired_count   = var.asg_desired_capacity
   launch_type     = "EC2"
 
   network_configuration {
