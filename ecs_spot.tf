@@ -49,7 +49,7 @@ resource "aws_launch_template" "ecs_spot" {
               # Setup DuckDNS Update Script
               cat << 'SCRIPT' > /usr/local/bin/update-duckdns.sh
               #!/bin/bash
-              curl -s "https://www.duckdns.org/update?domains=${var.duckdns_domain}&token=${var.duckdns_token}&ip="
+              curl -s "https://www.duckdns.org/update?domains=${var.project_name}&token=${var.duckdns_token}&ip="
               SCRIPT
 
               chmod +x /usr/local/bin/update-duckdns.sh

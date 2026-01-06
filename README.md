@@ -27,7 +27,6 @@ AWS_SECRET_ACCESS_KEY=<your-aws-secret-access-key>
 AWS_DEFAULT_REGION=<your-aws-region>
 
 # Terraform Variables
-TF_VAR_duckdns_domain=<your-duckdns-subdomain>
 TF_VAR_duckdns_token=<your-duckdns-token>
 ```
 
@@ -63,7 +62,7 @@ docker compose run --rm terraform-apply
 
 After the infrastructure is successfully deployed, the EC2 instance will automatically update your DuckDNS domain with its public IP address. You can access the Nginx HTML page by navigating to:
 
-http://<your-duckdns-subdomain>.duckdns.org/
+http://{project_name}.duckdns.org/
 
 *Note: It may take a minute for the instance to start and the DNS record to update.*
 
