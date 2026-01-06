@@ -37,11 +37,35 @@ This project leverages Docker Compose to encapsulate Terraform, eliminating the 
 
 ### Deploy Infrastructure
 
-Initialize and apply the Terraform configuration to provision resources:
+**Option 1: Plan and Apply (Recommended)**
+
+1. Generate an execution plan to preview changes:
+
+```bash
+docker compose run --rm terraform-plan
+```
+
+2. Apply the generated plan:
+
+```bash
+docker compose run --rm terraform-apply-plan
+```
+
+**Option 2: Direct Apply (Development)**
+
+Apply changes immediately without saving a plan file:
 
 ```bash
 docker compose run --rm terraform-apply
 ```
+
+### Accessing the Application
+
+After the infrastructure is successfully deployed, the EC2 instance will automatically update your DuckDNS domain with its public IP address. You can access the Nginx HTML page by navigating to:
+
+http://<your-duckdns-subdomain>.duckdns.org/
+
+*Note: It may take a minute for the instance to start and the DNS record to update.*
 
 ### Destroy Infrastructure
 

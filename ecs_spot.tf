@@ -2,6 +2,8 @@ data "aws_ssm_parameter" "ecs_ami" {
   name = "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
 }
 
+data "aws_region" "current" {}
+
 resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
   tags = {
@@ -88,10 +90,19 @@ resource "aws_autoscaling_group" "ecs_asg" {
   depends_on = [aws_launch_template.ecs_spot]
 }
 
+resource "aws_cloudwatch_log_group" "ecs_logs" {
+  name              = "/ecs/${var.project_name}-nginx"
+  retention_in_days = 7
+  tags = {
+    Name = "${var.project_name}-logs"
+  }
+}
+
 resource "aws_ecs_task_definition" "nginx" {
   family                   = "${var.project_name}-nginx"
-  network_mode             = "awsvpc"
+  network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
   cpu                      = 256
   memory                   = 256
 
@@ -109,6 +120,15 @@ resource "aws_ecs_task_definition" "nginx" {
     }
 
     command = ["/bin/sh", "-c", "echo '<h1>Nginx on ECS Spot with DuckDNS</h1>' > /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.ecs_logs.name
+        "awslogs-region"        = data.aws_region.current.id
+        "awslogs-stream-prefix" = "ecs"
+      }
+    }
   }])
   tags = {
     Name = "${var.project_name}-nginx-td"
@@ -122,11 +142,13 @@ resource "aws_ecs_service" "main" {
   desired_count   = var.asg_desired_capacity
   launch_type     = "EC2"
 
-  network_configuration {
-    subnets         = [aws_subnet.public.id]
-    security_groups = [aws_security_group.ecs_sg.id]
-  }
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+
   tags = {
     Name = "${var.project_name}-service"
   }
+
+  # Ensure IAM permissions are fully propagated before starting the service
+  depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_role_policy]
 }

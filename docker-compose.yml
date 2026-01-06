@@ -9,6 +9,12 @@ x-terraform: &terraform
     - .env
 
 services:
+  terraform-plan:
+    <<: [ *terraform ]
+    entrypoint: /bin/sh -c "terraform init && terraform plan -out=tfplan"
+  terraform-apply-plan:
+    <<: [ *terraform ]
+    entrypoint: /bin/sh -c "terraform init && terraform apply tfplan"
   terraform-apply:
     <<: [ *terraform ]
     entrypoint: /bin/sh -c "terraform init && terraform apply -auto-approve"
