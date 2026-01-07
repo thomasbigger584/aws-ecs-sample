@@ -43,20 +43,69 @@ resource "aws_launch_template" "ecs_spot" {
 
   user_data = base64encode(<<-EOF
               #!/bin/bash
+
               # Join the cluster
               echo ECS_CLUSTER=${aws_ecs_cluster.main.name} >> /etc/ecs/ecs.config
 
               # Setup DuckDNS Update Script
               cat << 'SCRIPT' > /usr/local/bin/update-duckdns.sh
               #!/bin/bash
+              echo "Updating DuckDNS..."
               curl -s "https://www.duckdns.org/update?domains=${var.project_name}&token=${var.duckdns_token}&ip="
               SCRIPT
 
               chmod +x /usr/local/bin/update-duckdns.sh
-              /usr/local/bin/update-duckdns.sh
+              /usr/local/bin/update-duckdns.sh > /var/log/duckdns.log 2>&1
+              cat /var/log/duckdns.log
 
               # Cron job to update every 5 mins
-              echo "*/5 * * * * root /usr/local/bin/update-duckdns.sh > /dev/null 2>&1" > /etc/cron.d/duckdns
+              echo "*/5 * * * * root /usr/local/bin/update-duckdns.sh >> /var/log/duckdns.log 2>&1" > /etc/cron.d/duckdns
+
+              # Install Certbot
+              amazon-linux-extras install epel -y
+              yum install -y certbot
+
+              # Wait a bit for DNS propagation
+              sleep 30
+
+              # Request Certificate with retries
+              # Ensure port 80 is free (it should be on fresh instance)
+              MAX_RETRIES=5
+              for ((i=1; i<=MAX_RETRIES; i++)); do
+                echo "Attempt $i of $MAX_RETRIES to obtain certificate..."
+                certbot certonly --standalone --non-interactive --agree-tos -m admin@${var.project_name}.duckdns.org -d ${var.project_name}.duckdns.org
+                if [ $? -eq 0 ]; then
+                  echo "Certificate obtained successfully."
+                  break
+                else
+                  echo "Certbot failed. Retrying in 30 seconds..."
+                  sleep 30
+                fi
+              done
+
+              # Create Nginx Config
+              mkdir -p /etc/nginx-config
+              cat << 'CONF' > /etc/nginx-config/default.conf
+              server {
+                  listen 80;
+                  server_name ${var.project_name}.duckdns.org;
+                  location / {
+                      return 301 https://$host$request_uri;
+                  }
+              }
+              server {
+                  listen 443 ssl;
+                  server_name ${var.project_name}.duckdns.org;
+
+                  ssl_certificate /etc/letsencrypt/live/${var.project_name}.duckdns.org/fullchain.pem;
+                  ssl_certificate_key /etc/letsencrypt/live/${var.project_name}.duckdns.org/privkey.pem;
+
+                  location / {
+                      root   /usr/share/nginx/html;
+                      index  index.html index.htm;
+                  }
+              }
+              CONF
               EOF
   )
   tags = {
@@ -106,10 +155,36 @@ resource "aws_ecs_task_definition" "nginx" {
   cpu                      = 256
   memory                   = 256
 
+  volume {
+    name      = "letsencrypt"
+    host_path = "/etc/letsencrypt"
+  }
+
+  volume {
+    name      = "nginx-config"
+    host_path = "/etc/nginx-config"
+  }
+
   container_definitions = jsonencode([{
     name         = "nginx"
     image        = "nginx:latest"
-    portMappings = [{ containerPort = 80, hostPort = 80 }]
+    portMappings = [
+      { containerPort = 80, hostPort = 80 },
+      { containerPort = 443, hostPort = 443 }
+    ]
+
+    mountPoints = [
+      {
+        sourceVolume  = "letsencrypt"
+        containerPath = "/etc/letsencrypt"
+        readOnly      = true
+      },
+      {
+        sourceVolume  = "nginx-config"
+        containerPath = "/etc/nginx/conf.d"
+        readOnly      = true
+      }
+    ]
 
     healthCheck = {
       command     = ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
