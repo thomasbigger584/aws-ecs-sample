@@ -1,6 +1,6 @@
 # AWS ECS Nginx Deployment on Spot Instances
 
-This project provides a Terraform-based solution for deploying an Nginx service on Amazon Elastic Container Service (ECS) using EC2 Spot Instances. It is designed to be cost-effective and includes automated dynamic DNS updates via DuckDNS.
+This project provides a Terraform-based solution for deploying an Nginx service on Amazon Elastic Container Service (ECS) using EC2 Spot Instances. It is designed to be cost-effective and includes automated dynamic DNS updates via DuckDNS and SSL termination using Let's Encrypt.
 
 ## Features
 
@@ -8,6 +8,7 @@ This project provides a Terraform-based solution for deploying an Nginx service 
 *   **ECS Cluster**: Deploys a lightweight ECS cluster backed by EC2.
 *   **Nginx Service**: Hosts a sample Nginx container serving a custom HTML page.
 *   **Dynamic DNS**: Automatically updates a DuckDNS domain with the instance's public IP using user data scripts and cron jobs.
+*   **SSL/TLS Encryption**: Automatically provisions free SSL certificates via Let's Encrypt (Certbot) on instance startup.
 *   **Containerized Tooling**: Executes Terraform commands within a Docker container to ensure a consistent deployment environment.
 
 ## Prerequisites
@@ -60,11 +61,16 @@ docker compose run --rm terraform-apply
 
 ### Accessing the Application
 
-After the infrastructure is successfully deployed, the EC2 instance will automatically update your DuckDNS domain with its public IP address. You can access the Nginx HTML page by navigating to:
+After the infrastructure is successfully deployed, the EC2 instance will:
+1.  Update your DuckDNS domain with its public IP.
+2.  Run Certbot to request an SSL certificate (this may take a few minutes as it retries until DNS propagation is complete).
+3.  Configure Nginx to serve traffic over HTTPS.
 
-http://{project_name}.duckdns.org/
+You can access the Nginx HTML page by navigating to:
 
-*Note: It may take a minute for the instance to start and the DNS record to update.*
+https://{project_name}.duckdns.org/
+
+*Note: It may take a few minutes for the instance to start, the DNS record to propagate, and the certificate to be issued. The startup script includes a retry mechanism for Certbot to handle DNS propagation delays.*
 
 ### Destroy Infrastructure
 
