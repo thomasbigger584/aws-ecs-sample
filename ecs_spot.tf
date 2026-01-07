@@ -41,73 +41,18 @@ resource "aws_launch_template" "ecs_spot" {
     }
   }
 
-  user_data = base64encode(<<-EOF
-              #!/bin/bash
+  user_data = base64encode(templatefile("${path.module}/script/setup_ecs_instance.sh.tpl", {
+    ecs_cluster_name = aws_ecs_cluster.main.name
+    project_name     = var.project_name
+    update_duckdns_content = templatefile("${path.module}/script/update_duckdns.sh.tpl", {
+      project_name  = var.project_name
+      duckdns_token = var.duckdns_token
+    })
+    nginx_conf_content = templatefile("${path.module}/nginx/nginx.conf.tpl", {
+      project_name = var.project_name
+    })
+  }))
 
-              # Join the cluster
-              echo ECS_CLUSTER=${aws_ecs_cluster.main.name} >> /etc/ecs/ecs.config
-
-              # Setup DuckDNS Update Script
-              cat << 'SCRIPT' > /usr/local/bin/update-duckdns.sh
-              #!/bin/bash
-              echo "Updating DuckDNS..."
-              curl -s "https://www.duckdns.org/update?domains=${var.project_name}&token=${var.duckdns_token}&ip="
-              SCRIPT
-
-              chmod +x /usr/local/bin/update-duckdns.sh
-              /usr/local/bin/update-duckdns.sh > /var/log/duckdns.log 2>&1
-              cat /var/log/duckdns.log
-
-              # Cron job to update every 5 mins
-              echo "*/5 * * * * root /usr/local/bin/update-duckdns.sh >> /var/log/duckdns.log 2>&1" > /etc/cron.d/duckdns
-
-              # Install Certbot
-              amazon-linux-extras install epel -y
-              yum install -y certbot
-
-              # Wait a bit for DNS propagation
-              sleep 30
-
-              # Request Certificate with retries
-              # Ensure port 80 is free (it should be on fresh instance)
-              MAX_RETRIES=5
-              for ((i=1; i<=MAX_RETRIES; i++)); do
-                echo "Attempt $i of $MAX_RETRIES to obtain certificate..."
-                certbot certonly --standalone --non-interactive --agree-tos -m admin@${var.project_name}.duckdns.org -d ${var.project_name}.duckdns.org
-                if [ $? -eq 0 ]; then
-                  echo "Certificate obtained successfully."
-                  break
-                else
-                  echo "Certbot failed. Retrying in 30 seconds..."
-                  sleep 30
-                fi
-              done
-
-              # Create Nginx Config
-              mkdir -p /etc/nginx-config
-              cat << 'CONF' > /etc/nginx-config/default.conf
-              server {
-                  listen 80;
-                  server_name ${var.project_name}.duckdns.org;
-                  location / {
-                      return 301 https://$host$request_uri;
-                  }
-              }
-              server {
-                  listen 443 ssl;
-                  server_name ${var.project_name}.duckdns.org;
-
-                  ssl_certificate /etc/letsencrypt/live/${var.project_name}.duckdns.org/fullchain.pem;
-                  ssl_certificate_key /etc/letsencrypt/live/${var.project_name}.duckdns.org/privkey.pem;
-
-                  location / {
-                      root   /usr/share/nginx/html;
-                      index  index.html index.htm;
-                  }
-              }
-              CONF
-              EOF
-  )
   tags = {
     Name = "${var.project_name}-lt"
   }
