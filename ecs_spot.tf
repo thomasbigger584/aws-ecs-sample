@@ -25,6 +25,26 @@ resource "aws_launch_template" "ecs_spot" {
 
   instance_market_options { market_type = "spot" }
 
+  # Prevent "Unlimited" bursting costs. Throttles CPU if credits are exhausted.
+  credit_specification {
+    cpu_credits = "standard"
+  }
+
+  # Ensure detailed monitoring (extra cost) is disabled
+  monitoring {
+    enabled = false
+  }
+
+  # Optimize storage: Use gp3 and limit size (AMI default might be 30GB)
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size = 10
+      volume_type = "gp3"
+      delete_on_termination = true
+    }
+  }
+
   tag_specifications {
     resource_type = "instance"
     tags = {
