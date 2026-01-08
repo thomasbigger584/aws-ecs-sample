@@ -12,7 +12,7 @@ if [ -z "${duckdns_token}" ]; then
 fi
 
 MAX_RETRIES=5
-RETRY_INTERVAL=30
+RETRY_INTERVAL=15
 
 for ((i=1; i<=MAX_RETRIES; i++)); do
   echo "Attempt $i of $MAX_RETRIES to update DuckDNS..."

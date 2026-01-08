@@ -41,7 +41,7 @@ echo "ECS_CLUSTER=${ecs_cluster_name}" >> /etc/ecs/ecs.config
 
 # DuckDNS
 chmod +x "/usr/local/bin/update-duckdns.sh"
-"/usr/local/bin/update-duckdns.sh" > /var/log/duckdns.log 2>&1
+/usr/local/bin/update-duckdns.sh > /var/log/duckdns.log 2>&1
 cat "/var/log/duckdns.log"
 
 # Cron job to update every 5 mins
